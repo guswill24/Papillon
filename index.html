@@ -19,13 +19,13 @@ const SLIDES=["sedifrale_animacion_1.html", "origines_perceptions_animacion_2.ht
 const view=document.getElementById('view'),bgm=document.getElementById('bgm'),PREF='audioPrefs',BGM_BASE=.15;
 // Global audio preferences (on/off + volume) are set from each slide's bar and persist across slides and visits.
 const norm=p=>{const v=parseFloat(p&&p.vol);return{on:!(p&&p.on===false),vol:isFinite(v)?Math.min(1,Math.max(0,v)):1}};
-let pref=norm(null);
+let pref=norm(null),hold=false; // hold: a slide's own video is playing, keep the music paused
 try{pref=norm(JSON.parse(localStorage.getItem(PREF)))}catch(e){}
 bgm.volume=BGM_BASE*pref.vol;
-const play=()=>{if(pref.on&&bgm.paused)bgm.play().catch(()=>{})};
+const play=()=>{if(pref.on&&!hold&&bgm.paused)bgm.play().catch(()=>{})};
 function setAudio(p){pref=norm(p);bgm.volume=BGM_BASE*pref.vol;if(pref.on)play();else bgm.pause();
   try{localStorage.setItem(PREF,JSON.stringify(pref))}catch(e){}}
-function show(i){view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
+function show(i){hold=false;view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
 view.onload=()=>{try{view.contentWindow.focus()}catch(e){}};
 const n=parseInt(location.hash.slice(1),10);
 show(n>=1&&n<=SLIDES.length?n-1:0);
@@ -36,6 +36,7 @@ addEventListener('message',e=>{
     if(document.fullscreenElement)document.exitFullscreen();else(r.requestFullscreen||r.webkitRequestFullscreen)?.call(r)}
   if(d.audioGet)e.source.postMessage({deckAudio:pref},'*');
   if(d.audio){setAudio(d.audio);return}
+  if('hold' in d){hold=!!d.hold;if(hold){bgm.pause();return}}
   play();
 });
 ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,play));

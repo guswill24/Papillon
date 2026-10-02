@@ -53,11 +53,16 @@ canvas#out{width:100%;height:100%;display:block;background:var(--paper)}
 .bar .vol{width:5.5em;accent-color:var(--gold);cursor:pointer;margin:0 .2em}
 .bar button.off{opacity:.6;text-decoration:line-through}
 @media (max-width:560px){.bar .vol{width:3.8em}}
+/* Real video shown over the drawn player once the animation ends (player rect at the final camera: zoom 1) */
+.realvid{position:absolute;left:16.507%;top:28.480%;width:54.878%;height:54.759%;border-radius:1.31%/2.33%;
+  background:#000;object-fit:contain;opacity:0;pointer-events:none;transition:opacity .8s ease}
+.realvid.show{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <canvas id="out" width="1920" height="1080" aria-label="Animación de la presentación"></canvas>
+  <video id="realVid" class="realvid" src="asssets/education.mp4" preload="metadata" playsinline controls aria-label="Video: resumen de NotebookLM"></video>
   <div class="loading" id="loading">Preparando la escena…</div>
   <div class="msg" id="msg"></div>
   <div class="panel" id="panel" hidden>
@@ -511,6 +516,26 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
   if(new URLSearchParams(location.search).has('export')){bar.remove();return}
   restart();poke();requestAnimationFrame(frame);
   say('Pulsa Reproducir para ver la animación con sonido.',6000);
+})();
+</script>
+<script>
+// After the animation (DUR) the drawn player is replaced by the real video; Reproducir resets it
+(()=>{
+  const v=document.getElementById('realVid');let shown=false;
+  const show=()=>{shown=true;v.classList.add('show');v.play().catch(()=>{})};
+  const hide=()=>{shown=false;v.classList.remove('show');v.pause();v.currentTime=0};
+  const tickVid=()=>{if(!shown&&now()>=DUR)show();requestAnimationFrame(tickVid)};
+  requestAnimationFrame(tickVid);
+  const baseRestart=restart;restart=function(){hide();baseRestart()};
+  // While the video plays, silence the slide's ambience and pause the background music so its voice is clear
+  const inDeck=window.parent!==window;let held=false;
+  const holdMusic=on=>{
+    if(inDeck){parent.postMessage({deck:1,hold:on},'*');return}
+    const bgm=document.getElementById('bgm');if(!bgm)return;
+    if(on&&!bgm.paused){bgm.pause();held=true}else if(!on&&held){held=false;bgm.play().catch(()=>{})}
+  };
+  v.addEventListener('play',()=>{if(AU.ctx&&AU.ctx.state==='running')AU.ctx.suspend();holdMusic(true)});
+  ['pause','ended'].forEach(ev=>v.addEventListener(ev,()=>{if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();holdMusic(false)}));
 })();
 </script>
 <audio id="bgm" src="et_douloureux.ogg" loop preload="auto"></audio>
