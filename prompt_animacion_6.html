@@ -49,6 +49,10 @@ canvas#out{width:100%;height:100%;display:block;background:var(--paper)}
 @media (max-width:560px){.bar button{padding:.45em .7em}.bar .t{display:none}}
 /* Recording and sound-settings controls are not used in the published slides */
 #bRec,#bSnd,#panel{display:none!important}
+/* Background-music toggle and volume */
+.bar .vol{width:5.5em;accent-color:var(--gold);cursor:pointer;margin:0 .2em}
+.bar button.off{opacity:.6;text-decoration:line-through}
+@media (max-width:560px){.bar .vol{width:3.8em}}
 </style>
 </head>
 <body>
@@ -73,7 +77,10 @@ canvas#out{width:100%;height:100%;display:block;background:var(--paper)}
     <span class="t" id="tc">0.0 s</span>
     <button id="bSnd" aria-expanded="false" aria-controls="panel">Sonido</button>
     <button id="bRec" class="rec">Grabar video</button>
+    <button id="bMus" aria-pressed="true" aria-label="Activar o silenciar todo el audio">♪ Audio</button>
+    <input type="range" id="vMus" class="vol" min="0" max="1" step="0.01" value="1" aria-label="Volumen general">
     <button id="bFs" aria-label="Pantalla completa">Pantalla completa</button>
+    <button id="bNext" data-href="quatre_piliers_animacion_7.html" aria-label="Animación siguiente">Siguiente ›</button>
   </div>
 </div>
 <script>
@@ -354,7 +361,7 @@ const AU={ctx:null,buses:{},music:null,src:null,session:null,offset:0,vol:{music
 async function audioInit(){
   if(AU.ctx){if(AU.ctx.state!=='running')await AU.ctx.resume();return}
   const C=new (window.AudioContext||window.webkitAudioContext)();AU.ctx=C;
-  const master=C.createGain();master.gain.value=.9;
+  const master=C.createGain();master.gain.value=.9;AU.master=master;
   const comp=C.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;comp.attack.value=.01;comp.release.value=.3;
   master.connect(comp);comp.connect(C.destination);
   AU.dest=C.createMediaStreamDestination();comp.connect(AU.dest);
@@ -517,13 +524,24 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
 // Navigation + background music. Inside the deck shell (index.html) the shell owns music and fullscreen,
 // so fullscreen survives slide changes; opened standalone, the page handles both itself.
 (()=>{
-  const bgm=document.getElementById('bgm'),KEY='bgmTime';
+  const bgm=document.getElementById('bgm'),KEY='bgmTime',PREF='audioPrefs',BGM_BASE=.15,STAGE_BASE=.9;
+  const bMus=document.getElementById('bMus'),vMus=document.getElementById('vMus');
+  const norm=p=>{const v=parseFloat(p&&p.vol);return{on:!(p&&p.on===false),vol:isFinite(v)?Math.min(1,Math.max(0,v)):1}};
+  let pref=norm(null);
+  // One control drives everything: the slide's Web Audio master (ambience + effects) and the background music
+  const stage=()=>{if(AU.master&&AU.ctx)AU.master.gain.setTargetAtTime(pref.on?STAGE_BASE*pref.vol:0,AU.ctx.currentTime,.05)};
+  const render=()=>{bMus.setAttribute('aria-pressed',String(pref.on));bMus.classList.toggle('off',!pref.on);vMus.value=pref.vol;stage()};
   // Start the slide's own ambience (birds, river) right away when the browser allows it, else on first interaction
-  const startAmb=()=>{audioInit().catch(()=>{})};
+  const startAmb=()=>{audioInit().then(stage).catch(()=>{});stage()};
   startAmb();['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,startAmb,{once:true}));
   if(window.parent!==window){
     bgm.remove();
     const send=m=>parent.postMessage(Object.assign({deck:1},m),'*');
+    addEventListener('message',e=>{const d=e.data;if(e.source===parent&&d&&d.deckAudio){pref=norm(d.deckAudio);render()}});
+    const push=()=>{render();send({audio:pref})};
+    bMus.onclick=()=>{pref={on:!pref.on,vol:pref.vol};push()};
+    vMus.oninput=()=>{pref=norm({on:true,vol:vMus.value});push()};
+    render();send({audioGet:1});
     document.querySelectorAll('[data-href]').forEach(b=>b.addEventListener('click',()=>send({go:b.dataset.href})));
     document.getElementById('bFs').onclick=()=>{
       try{const d=parent.document,r=d.documentElement;
@@ -533,11 +551,14 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
     ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>send({poke:1}),true));
     return;
   }
-  bgm.volume=0.15;
+  try{pref=norm(JSON.parse(localStorage.getItem(PREF)))}catch(e){}
   try{const t=parseFloat(sessionStorage.getItem(KEY));if(t>0)bgm.currentTime=t}catch(e){}
   const save=()=>{try{sessionStorage.setItem(KEY,String(bgm.currentTime))}catch(e){}};
-  const start=()=>{bgm.play().then(()=>{['pointerdown','keydown','touchstart'].forEach(ev=>removeEventListener(ev,start))}).catch(()=>{})};
-  start();
+  const start=()=>{if(!pref.on)return;bgm.play().then(()=>{['pointerdown','keydown','touchstart'].forEach(ev=>removeEventListener(ev,start))}).catch(()=>{})};
+  const apply=()=>{bgm.volume=BGM_BASE*pref.vol;if(pref.on)start();else bgm.pause();render();try{localStorage.setItem(PREF,JSON.stringify(pref))}catch(e){}};
+  bMus.onclick=()=>{pref={on:!pref.on,vol:pref.vol};apply()};
+  vMus.oninput=()=>{pref=norm({on:true,vol:vMus.value});apply()};
+  apply();
   ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,start));
   addEventListener('pagehide',save);
   document.querySelectorAll('[data-href]').forEach(b=>b.addEventListener('click',()=>{save();location.href=b.dataset.href}));
