@@ -25,7 +25,8 @@ bgm.volume=BGM_BASE*pref.vol;
 const play=()=>{if(pref.on&&!hold&&bgm.paused)bgm.play().catch(()=>{})};
 function setAudio(p){pref=norm(p);bgm.volume=BGM_BASE*pref.vol;if(pref.on)play();else bgm.pause();
   try{localStorage.setItem(PREF,JSON.stringify(pref))}catch(e){}}
-function show(i){hold=false;view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
+let cur=0;
+function show(i){cur=i;hold=false;view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
 view.onload=()=>{try{view.contentWindow.focus()}catch(e){}};
 const n=parseInt(location.hash.slice(1),10);
 show(n>=1&&n<=SLIDES.length?n-1:0);
@@ -40,6 +41,10 @@ addEventListener('message',e=>{
   play();
 });
 ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,play));
+// Clicker keys reaching the shell (focus outside the slide) still change slides
+addEventListener('keydown',e=>{if(e.repeat)return;
+  const k=e.key,d=['PageDown','ArrowRight','ArrowDown'].includes(k)?1:['PageUp','ArrowLeft','ArrowUp'].includes(k)?-1:0;
+  if(d&&SLIDES[cur+d]){e.preventDefault();show(cur+d)}});
 </script>
 </body>
 </html>

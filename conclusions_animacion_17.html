@@ -499,6 +499,11 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
   // Start the slide's own ambience (birds, river) right away when the browser allows it, else on first interaction
   const startAmb=()=>{audioInit().then(stage).catch(()=>{});stage()};
   startAmb();['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,startAmb,{once:true}));
+  // Presentation remotes (clickers) send PageDown/PageUp, some send arrow keys: map them to Next/Previous
+  const NEXT_KEYS=['PageDown','ArrowRight','ArrowDown'],PREV_KEYS=['PageUp','ArrowLeft','ArrowUp'];
+  addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,select,textarea'))return;
+    const b=document.getElementById(NEXT_KEYS.includes(e.key)?'bNext':PREV_KEYS.includes(e.key)?'bPrev':'');
+    if(!b)return;e.preventDefault();if(!e.repeat)b.click()});
   if(window.parent!==window){
     bgm.remove();
     const send=m=>parent.postMessage(Object.assign({deck:1},m),'*');
