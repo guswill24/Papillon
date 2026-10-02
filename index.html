@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SEDIFRALE 2026</title>
+<style>
+:root{--night:#0d1730}
+html,body{margin:0;height:100%;background:var(--night);overflow:hidden}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:var(--night)}
+</style>
+</head>
+<body>
+<iframe id="view" title="Presentación" allow="autoplay; fullscreen"></iframe>
+<audio id="bgm" src="et_douloureux.ogg" loop preload="auto"></audio>
+<script>
+// Deck shell: stays loaded (and fullscreen) while slides swap inside the iframe; music plays continuously.
+const SLIDES=["sedifrale_animacion_1.html", "origines_perceptions_animacion_2.html", "les_echos_animacion_3.html", "points_cles_animacion_4.html", "triangle_pedagogique_animacion_5.html", "prompt_animacion_6.html"];
+const view=document.getElementById('view'),bgm=document.getElementById('bgm');
+bgm.volume=0.15;
+const play=()=>{if(bgm.paused)bgm.play().catch(()=>{})};
+function show(i){view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
+view.onload=()=>{try{view.contentWindow.focus()}catch(e){}};
+const n=parseInt(location.hash.slice(1),10);
+show(n>=1&&n<=SLIDES.length?n-1:0);
+addEventListener('message',e=>{
+  const d=e.data;if(e.source!==view.contentWindow||!d||!d.deck)return;
+  if(d.go){const i=SLIDES.indexOf(d.go);if(i>=0)show(i)}
+  if(d.fs){const r=document.documentElement;
+    if(document.fullscreenElement)document.exitFullscreen();else(r.requestFullscreen||r.webkitRequestFullscreen)?.call(r)}
+  play();
+});
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,play));
+</script>
+</body>
+</html>
