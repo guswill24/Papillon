@@ -1,7 +1,10 @@
 <!DOCTYPE html>
+<!-- Copyright (c) 2026 guswillsan@hotmail.com. All rights reserved. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="author" content="guswillsan@hotmail.com">
+<meta name="copyright" content="© 2026 guswillsan@hotmail.com. All rights reserved.">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Machu Picchu · Papillon — animation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,11 +56,19 @@ canvas#out{width:100%;height:100%;display:block;background:var(--paper)}
 .bar .vol{width:5.5em;accent-color:var(--gold);cursor:pointer;margin:0 .2em}
 .bar button.off{opacity:.6;text-decoration:line-through}
 @media (max-width:560px){.bar .vol{width:3.8em}}
+/* Google Form link under the QR card; positioned each frame to follow the camera */
+.formBtn{position:absolute;left:47.25%;top:77.4%;transform:translate(-50%,-50%);font:inherit;font-weight:600;font-size:clamp(14px,1.7vw,22px);
+  background:var(--gold);color:var(--night);text-decoration:none;white-space:nowrap;border-radius:999px;padding:.45em 1.3em;
+  box-shadow:0 6px 18px rgba(13,23,48,.28);opacity:0;pointer-events:none;transition:opacity .8s ease,filter .2s}
+.formBtn.show{opacity:1;pointer-events:auto}
+.formBtn:hover{filter:brightness(1.08)}
+.formBtn:focus-visible{outline:2px solid var(--paper);outline-offset:3px}
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <canvas id="out" width="1920" height="1080" aria-label="Animación de la presentación"></canvas>
+  <a id="formBtn" class="formBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSc0ezb_ag_L9PrtkXE0tgWgROTJGouw6J44Y2g30FQuhU8EvQ/viewform" target="_blank" rel="noopener" aria-label="Abrir el formulario del congreso en una pestaña nueva">Formulaire · Formulario ↗</a>
   <div class="loading" id="loading">Preparing the scene…</div>
   <div class="msg" id="msg"></div>
   <div class="panel" id="panel" hidden>
@@ -524,6 +535,16 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
   addEventListener('touchend',e=>{if(x0===null)return;const p=e.changedTouches[0],dx=p.clientX-x0,dy=p.clientY-y0;x0=null;
     if(Date.now()-t0>800||Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;
     document.getElementById(dx<0?'bNext':'bPrev')?.click()},{passive:true});
+})();
+</script>
+<script>
+// Form button: appears after the QR caption and stays centred under the card while the camera eases out
+(()=>{
+  const btn=document.getElementById('formBtn'),FX=790,FY=728;
+  const place=()=>{const t=now(),c=camera(t),kx=OW/SW*c.zoom,ky=OH/SH*c.zoom;
+    btn.style.left=((FX-c.cx)*kx+OW/2)/OW*100+'%';btn.style.top=((FY-c.cy)*ky+OH/2)/OH*100+'%';
+    btn.classList.toggle('show',t>=T.caption+.6);requestAnimationFrame(place)};
+  requestAnimationFrame(place);
 })();
 </script>
 <audio id="bgm" src="et_douloureux.ogg" loop preload="auto"></audio>
