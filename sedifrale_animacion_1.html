@@ -454,6 +454,17 @@ window.renderAt=t=>{drawScene(t);return out};window.DURATION=DUR;
   say('Pulsa Reproducir para ver la animación con sonido.',6000);
 })();
 </script>
+<script>
+// Touch swipe: left = next slide, right = previous (ignored on videos and on the control bar)
+(()=>{
+  let x0=null,y0=0,t0=0;
+  addEventListener('touchstart',e=>{const p=e.touches[0];
+    x0=(e.touches.length===1&&!e.target.closest('video,.bar,input'))?p.clientX:null;y0=p.clientY;t0=Date.now()},{passive:true});
+  addEventListener('touchend',e=>{if(x0===null)return;const p=e.changedTouches[0],dx=p.clientX-x0,dy=p.clientY-y0;x0=null;
+    if(Date.now()-t0>800||Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    document.getElementById(dx<0?'bNext':'bPrev')?.click()},{passive:true});
+})();
+</script>
 <audio id="bgm" src="et_douloureux.ogg" loop preload="auto"></audio>
 <script>
 // Navigation + background music. Inside the deck shell (index.html) the shell owns music and fullscreen,

@@ -3,16 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SEDIFRALE 2026</title>
+<title>SEDIFRALE 2026 · L'intelligence artificielle en classe de FLE</title>
+<meta name="description" content="L'intelligence artificielle en classe de FLE : alliée pédagogique pour le développement de la production orale ? XIXe SEDIFRALE, Lima. Claudia Sánchez et Leonardo Florez, Université de Nariño.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="SEDIFRALE 2026">
+<meta property="og:title" content="L'intelligence artificielle en classe de FLE">
+<meta property="og:description" content="Alliée pédagogique pour le développement de la production orale ? XIXe SEDIFRALE, Lima. Claudia Sánchez et Leonardo Florez, Université de Nariño.">
+<meta property="og:url" content="https://papillon-orpin.vercel.app/">
+<meta property="og:image" content="https://papillon-orpin.vercel.app/og-image.jpg">
+<link rel="canonical" href="https://papillon-orpin.vercel.app/">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Portada: L'intelligence artificielle en classe de FLE, sobre una pintura impresionista del Sena">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0d1730">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 :root{--night:#0d1730}
 html,body{margin:0;height:100%;background:var(--night);overflow:hidden}
-iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:var(--night)}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:var(--night);transition:opacity .25s ease}
+iframe.out{opacity:0}
+@media (prefers-reduced-motion:reduce){iframe{transition:none}}
+.toast{position:fixed;left:16px;bottom:16px;z-index:2;max-width:calc(100% - 32px);padding:.6em 1em;border-radius:12px;
+  background:rgba(13,23,48,.9);border:1px solid rgba(201,162,75,.45);color:#f6f2ea;font:600 15px/1.35 Garamond,"Times New Roman",serif;
+  transition:opacity .4s}
+.toast[hidden]{display:none}
 </style>
 </head>
 <body>
 <iframe id="view" title="Presentación" allow="autoplay; fullscreen"></iframe>
 <audio id="bgm" src="et_douloureux.ogg" loop preload="auto"></audio>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script>
 // Deck shell: stays loaded (and fullscreen) while slides swap inside the iframe; music plays continuously.
 const SLIDES=["sedifrale_animacion_1.html", "origines_perceptions_animacion_2.html", "les_echos_animacion_3.html", "points_cles_animacion_4.html", "triangle_pedagogique_animacion_5.html", "prompt_animacion_6.html", "quatre_piliers_animacion_7.html", "piliers_exemple_animacion_8.html", "notebooklm_video_animacion_9.html", "notebooklm_animacion_10.html", "personnaliser_video_animacion_11.html", "atouts_ia_oral_animacion_12.html", "outils_chatbots_animacion_13.html", "talkpal_qr_animacion_14.html", "talkpal_outils_animacion_15.html", "talkpal_animacion_16.html", "conclusions_animacion_17.html", "references_ombrelle_animacion18b.html", "machu_picchu_papillon_19.html"];
@@ -25,9 +49,14 @@ bgm.volume=BGM_BASE*pref.vol;
 const play=()=>{if(pref.on&&!hold&&bgm.paused)bgm.play().catch(()=>{})};
 function setAudio(p){pref=norm(p);bgm.volume=BGM_BASE*pref.vol;if(pref.on)play();else bgm.pause();
   try{localStorage.setItem(PREF,JSON.stringify(pref))}catch(e){}}
-let cur=0;
-function show(i){cur=i;hold=false;view.src=SLIDES[i];history.replaceState(null,'','#'+(i+1))}
-view.onload=()=>{try{view.contentWindow.focus()}catch(e){}};
+// Neighbour slides are prefetched into the HTTP cache; changes fade out, swap, and fade back in on load
+let cur=0,navTok=0;
+function prefetch(i){const h=SLIDES[i];if(!h||document.querySelector(`link[data-pre="${h}"]`))return;
+  const l=document.createElement('link');l.rel='prefetch';l.href=h;l.dataset.pre=h;document.head.appendChild(l)}
+function show(i){cur=i;hold=false;history.replaceState(null,'','#'+(i+1));
+  if(!view.getAttribute('src')){view.src=SLIDES[i];return}
+  const tok=++navTok;view.classList.add('out');setTimeout(()=>{if(tok===navTok)view.src=SLIDES[i]},250)}
+view.onload=()=>{view.classList.remove('out');try{view.contentWindow.focus()}catch(e){};prefetch(cur+1);prefetch(cur-1)};
 const n=parseInt(location.hash.slice(1),10);
 show(n>=1&&n<=SLIDES.length?n-1:0);
 addEventListener('message',e=>{
@@ -45,6 +74,29 @@ addEventListener('message',e=>{
 addEventListener('keydown',e=>{if(e.repeat)return;
   const k=e.key,d=['PageDown','ArrowRight','ArrowDown'].includes(k)?1:['PageUp','ArrowLeft','ArrowUp'].includes(k)?-1:0;
   if(d&&SLIDES[cur+d]){e.preventDefault();show(cur+d)}});
+</script>
+<script>
+// Offline: the service worker caches what is visited. Opening index.html?offline downloads the whole deck
+// (slides, music, videos) so it can be presented without internet.
+(()=>{
+  if(!('serviceWorker' in navigator)||!window.caches)return;
+  const CACHE='sedifrale-v1',VIDEOS=['asssets/education.mp4','asssets/exemple_talkpal.mp4'];
+  const toast=document.getElementById('toast');
+  const say=(t,ms)=>{toast.textContent=t;toast.hidden=false;clearTimeout(say.h);if(ms)say.h=setTimeout(()=>toast.hidden=true,ms)};
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(!new URLSearchParams(location.search).has('offline'))return;
+  (async()=>{
+    const files=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','og-image.jpg','et_douloureux.ogg',...SLIDES,...VIDEOS];
+    const cache=await caches.open(CACHE);let done=0,failed=0;
+    say(`Guardando la presentación para usarla sin conexión… 0/${files.length}`);
+    for(const f of files){
+      try{const res=await fetch(f,{cache:'reload'});if(!res.ok)throw new Error(res.status);await cache.put(f,res)}catch(e){failed++}
+      say(`Guardando la presentación para usarla sin conexión… ${++done}/${files.length}`);
+    }
+    say(failed?`No se pudieron guardar ${failed} archivos. Revisa la conexión y vuelve a abrir esta página.`
+              :'Listo: la presentación funciona sin conexión en este navegador.',failed?0:8000);
+  })();
+})();
 </script>
 </body>
 </html>

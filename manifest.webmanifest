@@ -1,0 +1,16 @@
+{
+  "name": "SEDIFRALE 2026 · L'intelligence artificielle en classe de FLE",
+  "short_name": "SEDIFRALE 2026",
+  "description": "L'intelligence artificielle en classe de FLE : alliée pédagogique pour le développement de la production orale ?",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d1730",
+  "theme_color": "#0d1730",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
